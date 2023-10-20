@@ -109,10 +109,10 @@ namespace WolvenKit.Modkit.RED4.Opus
             for(UInt32 i =0; i < OpusCount; i++)
             {
                 opuspaks[PackIndices[i]].Position = OpusOffsets[i] + RiffOpusOffsets[i];
-                //Console.WriteLine(OpusHashes[i] + " " + PackIndices[i] + " " + (OpusOffsets[i] + RiffOpusOffsets[i]) + " " + (OpusStreamLengths[i] - RiffOpusOffsets[i]));
                 byte[] bytes = brs[PackIndices[i]].ReadBytes(Convert.ToInt32(OpusStreamLengths[i] - RiffOpusOffsets[i]));
                 string name = OpusHashes[i] + ".opus";
                 File.WriteAllBytes(Path.Combine(outdir.FullName,name),bytes);
+                Console.WriteLine("Wrote opus " + (i+1) + "/" + OpusCount);
             }
         }
         public void WriteOpusFromPaks(Stream[] opuspaks, DirectoryInfo outdir, UInt32 hash)

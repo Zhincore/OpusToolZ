@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using WolvenKit.Modkit.RED4.Opus;
-using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -12,8 +11,8 @@ namespace OpusToolZ
     {
         static int Main(string[] args)
         {
-            string opusinfo = args[0];
-            string filehash = args[1];
+            string opusinfo = args[0].Replace("\"", string.Empty);
+            string dir = args[1].Replace("\"", string.Empty);
 
             FileStream fs = new FileStream(opusinfo, FileMode.Open, FileAccess.Read);
             BinaryReader br = new BinaryReader(fs);
@@ -23,6 +22,12 @@ namespace OpusToolZ
                 fs.Dispose();
                 fs.Close();
                 Console.WriteLine("Not a opusinfo file");
+                return 1;
+            }
+
+            if (!Directory.Exists(dir))
+            {
+                Console.WriteLine("Invalid output directory! create it");
                 return 1;
             }
 
@@ -39,43 +44,26 @@ namespace OpusToolZ
 
             UInt32 numOfPaks = Convert.ToUInt32(tempolisto.Count);
 
+            Console.WriteLine("Found " + numOfPaks + " paks and " + info.OpusCount + " opuses");
+
             string[] files = Directory.GetFiles(Path.GetDirectoryName(opusinfo), "*.opuspak").OrderBy(_ => Convert.ToUInt32(_.Replace(".opuspak", string.Empty).Substring(_.LastIndexOf('_') + 1))).ToArray();
             Stream[] streams = new Stream[files.Length];
             for (int i = 0; i < files.Length; i++)
             {
+                Console.WriteLine("Loading pak " + (i+1) + "/" + files.Length);
                 streams[i] = new FileStream(files[i], FileMode.Open, FileAccess.Read);
             }
             
             if(files.Length != numOfPaks)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("All " + Convert.ToString(numOfPaks) + " .opuspak files are not present in the directory of sfx_container.opusinfo");
+                Console.WriteLine("Not all of " + Convert.ToString(numOfPaks) + " .opuspak files are present in the directory of sfx_container.opusinfo");
                 return 1;
             }
 
-
-            UInt32 hash = 0;
-            try
-            {
-                hash = Convert.ToUInt32(filehash);
-                if (!info.OpusHashes.Contains(hash))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Opus file hash not present in opusinfo , try again");
-                    Console.ResetColor();
-                }
-            }
-            catch { 
-                Console.WriteLine("Invalid Hash"); 
-                return 1; 
-            }
-
-
-            string output = AppDomain.CurrentDomain.BaseDirectory + filehash + ".opus";
-            info.WriteOpusFromPaks(streams, new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory), hash);
             
+            info.WriteAllOpusFromPaks(streams, new DirectoryInfo(dir));
+            Console.WriteLine("output: " + dir);
 
-            Console.WriteLine("output: " + output);
             return 0;            
         }
     }
