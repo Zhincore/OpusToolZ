@@ -8,7 +8,7 @@ namespace WolvenKit.Modkit.RED4.Opus
 {
     class OpusTools
     {
-        public static void Parse(FileInfo opusinfofile,DirectoryInfo paksdir,DirectoryInfo outdir)
+        public static void Parse(FileInfo opusinfofile, DirectoryInfo paksdir, DirectoryInfo outdir)
         {
             FileStream fs = new FileStream(opusinfofile.FullName, FileMode.Open, FileAccess.Read);
             OpusInfo info = new OpusInfo(fs);
@@ -16,19 +16,19 @@ namespace WolvenKit.Modkit.RED4.Opus
 
             string[] files = Directory.GetFiles(paksdir.FullName, "*.opuspak").OrderBy(f => Convert.ToUInt32(f.Replace(".opuspak", string.Empty).Substring(f.LastIndexOf('_') + 1))).ToArray();
             Stream[] paks = new Stream[files.Length];
-            for(int i = 0; i < files.Length; i++)
+            for (int i = 0; i < files.Length; i++)
             {
                 paks[i] = new FileStream(files[i], FileMode.Open, FileAccess.Read);
             }
             info.WriteAllOpusFromPaks(paks, outdir);
-            
+
         }
     }
     class OpusInfo
     {
-                                    //  S       N       D   ?....
+        //  S       N       D   ?....
         public byte[] Header { get; } = { 0x53, 0x4E, 0x44, 0x20, 0x02, 0x00, 0x00, 0xF0, 0x00, 0x00, 0x00, 0x00 };
-        public  UInt32 OpusCount { get; set; }
+        public UInt32 OpusCount { get; set; }
         public UInt32 GroupingObjSize4x { get; set; }
         public UInt32[] OpusHashes { get; set; }
         public UInt16[] PackIndices { get; set; }
@@ -51,7 +51,7 @@ namespace WolvenKit.Modkit.RED4.Opus
             GroupingObjSize4x = br.ReadUInt32();
 
             OpusHashes = new UInt32[OpusCount];
-            for(int i = 0; i < OpusCount; i++)
+            for (int i = 0; i < OpusCount; i++)
             {
                 OpusHashes[i] = br.ReadUInt32();
             }
@@ -92,27 +92,27 @@ namespace WolvenKit.Modkit.RED4.Opus
                 group.Hash = br.ReadUInt32();
                 group.MemberCount = br.ReadUInt32();
                 group.MemberHashes = new UInt32[group.MemberCount];
-                for(UInt32 i = 0; i < group.MemberCount; i++)
+                for (UInt32 i = 0; i < group.MemberCount; i++)
                 {
                     group.MemberHashes[i] = br.ReadUInt32();
                 }
                 GroupObjs.Add(group);
             }
         }
-        public void WriteAllOpusFromPaks(Stream[] opuspaks,DirectoryInfo outdir)
+        public void WriteAllOpusFromPaks(Stream[] opuspaks, DirectoryInfo outdir)
         {
             BinaryReader[] brs = new BinaryReader[opuspaks.Length];
-            for(int i = 0; i < opuspaks.Length; i++)
+            for (int i = 0; i < opuspaks.Length; i++)
             {
                 brs[i] = new BinaryReader(opuspaks[i]);
             }
-            for(UInt32 i =0; i < OpusCount; i++)
+            for (UInt32 i = 0; i < OpusCount; i++)
             {
                 opuspaks[PackIndices[i]].Position = OpusOffsets[i] + RiffOpusOffsets[i];
                 byte[] bytes = brs[PackIndices[i]].ReadBytes(Convert.ToInt32(OpusStreamLengths[i] - RiffOpusOffsets[i]));
                 string name = OpusHashes[i] + ".opus";
-                File.WriteAllBytes(Path.Combine(outdir.FullName,name),bytes);
-                Console.WriteLine("Wrote opus " + (i+1) + "/" + OpusCount);
+                File.WriteAllBytes(Path.Combine(outdir.FullName, name), bytes);
+                Console.WriteLine("Wrote opus " + (i + 1) + "/" + OpusCount);
             }
         }
         public void WriteOpusFromPaks(Stream[] opuspaks, DirectoryInfo outdir, UInt32 hash)
@@ -125,7 +125,7 @@ namespace WolvenKit.Modkit.RED4.Opus
 
             for (UInt32 i = 0; i < OpusCount; i++)
             {
-                if(OpusHashes[i] == hash)
+                if (OpusHashes[i] == hash)
                 {
                     opuspaks[PackIndices[i]].Position = OpusOffsets[i] + RiffOpusOffsets[i];
                     byte[] bytes = brs[PackIndices[i]].ReadBytes(Convert.ToInt32(OpusStreamLengths[i] - RiffOpusOffsets[i]));
@@ -135,12 +135,12 @@ namespace WolvenKit.Modkit.RED4.Opus
                 }
             }
         }
-        public void WriteOpusToPak(MemoryStream opus,ref Stream pak, UInt32 hash, MemoryStream wav)
+        public void WriteOpusToPak(MemoryStream opus, ref Stream pak, UInt32 hash, MemoryStream wav)
         {
             BinaryReader br = new BinaryReader(pak);
             pak.Position = 0;
             int index = 0;
-            for(int i = 0; i < OpusCount; i++)
+            for (int i = 0; i < OpusCount; i++)
             {
                 if (hash == OpusHashes[i])
                     index = i;
@@ -159,7 +159,7 @@ namespace WolvenKit.Modkit.RED4.Opus
             for (int i = 0; i < indices.Count; i++)
             {
                 UInt32 temp = Convert.ToUInt32(ms.Position);
-                if(hash == OpusHashes[indices[i]])
+                if (hash == OpusHashes[indices[i]])
                 {
                     pak.Position = OpusOffsets[indices[i]] + 8;
                     var bytes = br.ReadBytes(RiffOpusOffsets[indices[i]] - 12);
@@ -193,7 +193,7 @@ namespace WolvenKit.Modkit.RED4.Opus
             bw.Write(Header);
             bw.Write(OpusCount);
             bw.Write(GroupingObjSize4x);
-            for(int i = 0; i < OpusCount; i++)
+            for (int i = 0; i < OpusCount; i++)
             {
                 bw.Write(OpusHashes[i]);
             }
@@ -222,12 +222,12 @@ namespace WolvenKit.Modkit.RED4.Opus
             {
                 bw.Write(GroupObjs[i].Hash);
                 bw.Write(GroupObjs[i].MemberCount);
-                for(int e = 0; e < GroupObjs[i].MemberCount; e++)
+                for (int e = 0; e < GroupObjs[i].MemberCount; e++)
                 {
                     bw.Write(GroupObjs[i].MemberHashes[e]);
                 }
             }
-            File.WriteAllBytes(Path.Combine(dir.FullName,"sfx_container.opusinfo"), ms.ToArray());
+            File.WriteAllBytes(Path.Combine(dir.FullName, "sfx_container.opusinfo"), ms.ToArray());
         }
     }
 }

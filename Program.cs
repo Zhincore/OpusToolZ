@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using WolvenKit.Modkit.RED4.Opus;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -36,7 +37,7 @@ namespace OpusToolZ
             List<UInt16> tempolisto = new List<UInt16>();
             for (int i = 0; i < info.OpusCount; i++)
             {
-                if(!tempolisto.Contains(info.PackIndices[i]))
+                if (!tempolisto.Contains(info.PackIndices[i]))
                 {
                     tempolisto.Add(info.PackIndices[i]);
                 }
@@ -46,25 +47,28 @@ namespace OpusToolZ
 
             Console.WriteLine("Found " + numOfPaks + " paks and " + info.OpusCount + " opuses");
 
+            string json = JsonConvert.SerializeObject(info);
+            File.WriteAllText(dir + "\\info.json", json);
+
             string[] files = Directory.GetFiles(Path.GetDirectoryName(opusinfo), "*.opuspak").OrderBy(_ => Convert.ToUInt32(_.Replace(".opuspak", string.Empty).Substring(_.LastIndexOf('_') + 1))).ToArray();
             Stream[] streams = new Stream[files.Length];
             for (int i = 0; i < files.Length; i++)
             {
-                Console.WriteLine("Loading pak " + (i+1) + "/" + files.Length);
+                Console.WriteLine("Loading pak " + (i + 1) + "/" + files.Length);
                 streams[i] = new FileStream(files[i], FileMode.Open, FileAccess.Read);
             }
-            
-            if(files.Length != numOfPaks)
+
+            if (files.Length != numOfPaks)
             {
                 Console.WriteLine("Not all of " + Convert.ToString(numOfPaks) + " .opuspak files are present in the directory of sfx_container.opusinfo");
                 return 1;
             }
 
-            
+
             info.WriteAllOpusFromPaks(streams, new DirectoryInfo(dir));
             Console.WriteLine("output: " + dir);
 
-            return 0;            
+            return 0;
         }
     }
 }
