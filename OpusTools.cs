@@ -120,23 +120,31 @@ namespace WolvenKit.Modkit.RED4.Opus
             BinaryReader[] brs = new BinaryReader[opuspaks.Length];
             for (int i = 0; i < opuspaks.Length; i++)
             {
-                brs[i] = new BinaryReader(opuspaks[i]);
+                if (opuspaks[i] != null) brs[i] = new BinaryReader(opuspaks[i]);
             }
 
             var _hashes = new List<UInt32>(hashes);
             for (UInt32 i = 0; i < OpusCount; i++)
             {
-                var index = _hashes.IndexOf(OpusHashes[i]);
-                if (index != -1)
+                if (opuspaks[PackIndices[i]] != null && _hashes.Contains(OpusHashes[i]))
                 {
                     opuspaks[PackIndices[i]].Position = OpusOffsets[i] + RiffOpusOffsets[i];
                     byte[] bytes = brs[PackIndices[i]].ReadBytes(Convert.ToInt32(OpusStreamLengths[i] - RiffOpusOffsets[i]));
                     string name = OpusHashes[i] + ".opus";
                     File.WriteAllBytes(Path.Combine(outdir.FullName, name), bytes);
-                    _hashes.RemoveAt(index);
+                    _hashes.RemoveAll(h => h == OpusHashes[i]);
                     Console.WriteLine("Wrote " + (hashes.Count - _hashes.Count + 1) + "/" + hashes.Count + " opuses.");
                 }
             }
+
+            if (_hashes.Count > 0) {
+                Console.Write("Warning: The following hashes have not been found: ");
+                for (int i = 0; i < _hashes.Count; i++) {
+                    Console.Write((i > 0  ? ", " : "") + _hashes[i]);
+                }
+                Console.Write("\n");
+            }
+            
         }
         public void WriteOpusFromPaks(Stream[] opuspaks, DirectoryInfo outdir, UInt32 hash)
         {
@@ -148,7 +156,7 @@ namespace WolvenKit.Modkit.RED4.Opus
 
             for (UInt32 i = 0; i < OpusCount; i++)
             {
-                if (OpusHashes[i] == hash)
+                if (opuspaks[PackIndices[i]] != null && OpusHashes[i] == hash)
                 {
                     opuspaks[PackIndices[i]].Position = OpusOffsets[i] + RiffOpusOffsets[i];
                     byte[] bytes = brs[PackIndices[i]].ReadBytes(Convert.ToInt32(OpusStreamLengths[i] - RiffOpusOffsets[i]));

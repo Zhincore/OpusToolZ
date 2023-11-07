@@ -55,24 +55,24 @@ namespace OpusToolZ
 
             UInt32 numOfPaks = Convert.ToUInt32(tempolisto.Count);
 
-            Console.WriteLine("Found " + numOfPaks + " paks and " + info.OpusCount + " opuses");
-
              // Prepare opuspak streams
-            string[] files = Directory.GetFiles(Path.GetDirectoryName(opusinfo), "*.opuspak").OrderBy(_ => Convert.ToUInt32(_.Replace(".opuspak", string.Empty).Substring(_.LastIndexOf('_') + 1))).ToArray();
+            uint[] files = Directory.GetFiles(Path.GetDirectoryName(opusinfo), "*.opuspak").Select(n => GetIndexOfPakName(n)).ToArray();
 
-            if (files.Length != files.Length)
-            {
-                Console.WriteLine("Not all of " + Convert.ToString(numOfPaks) + " .opuspak files are present in the folder of sfx_container.opusinfo");
-            }
-
-            Stream[] streams = new Stream[files.Length];
+            Stream[] streams = new Stream[numOfPaks];
             for (int i = 0; i < files.Length; i++)
             {
-                Console.WriteLine("Loading pak " + (i + 1) + "/" + files.Length);
-                streams[i] = new FileStream(files[i], FileMode.Open, FileAccess.Read);
+                streams[files[i]] = new FileStream(
+                    Path.Join(Path.GetDirectoryName(opusinfo), "sfx_container_"+files[i]+".opuspak"), 
+                    FileMode.Open, 
+                    FileAccess.Read
+                );
             }
             
             return streams;
+        }
+
+        static UInt32 GetIndexOfPakName(string name) {
+            return Convert.ToUInt32(name.Replace(".opuspak", string.Empty).Substring(name.LastIndexOf('_') + 1));
         }
 
         static int Info(string[] args, OpusInfo info) {
@@ -102,7 +102,7 @@ namespace OpusToolZ
                 }
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(dir));
+            Directory.CreateDirectory(dir);
 
             info.WriteOpusesFromPaks(streams, new DirectoryInfo(dir), hashes);
             
@@ -124,6 +124,11 @@ namespace OpusToolZ
                     {
                         if (info.OpusHashes[i] == id)
                         {
+                            var pakIdx = info.PackIndices[i];
+                            if (streams[pakIdx] == null) {
+                                Console.WriteLine("Opuspak " + pakIdx + " for file " + foundids[i] + " was not found.");
+                                continue;
+                            }
                             found = true;
                             foundids.Add(id);
                             break;
@@ -134,7 +139,7 @@ namespace OpusToolZ
                         Console.WriteLine("Warning: File " + Path.GetFileName(file) + " was not originally in opusinfo, skipping...");
                     }
                 } catch (FormatException) {
-                    Console.WriteLine("Warning: Filename " + Path.GetFileName(file) + " isn't hash, skipping...");
+                    Console.WriteLine("Warning: Filename '" + Path.GetFileName(file) + "' isn't a valid hash, skipping...");
                 }
             }
 
@@ -152,45 +157,6 @@ namespace OpusToolZ
                 string tmpOpus = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tmp\\"+opusFilename);
                 string tmpWav = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tmp\\"+wavFilename);
 
-                var proc = new ProcessStartInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "opusenc.exe"))
-                {
-                    WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
-                    Arguments = $" \"{inpath}\" \"{tmpOpus}\" --serial 42 --quiet --padding 0 --vbr --comp 10 --framesize 20 ",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true,
-                };
-                using (var p = Process.Start(proc))
-                {
-                    p.WaitForExit();
-                }
-
-                var procnew = new ProcessStartInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "opusdec.exe"))
-                {
-                    WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
-                    Arguments = $" \"{tmpOpus}\" \"{tmpWav}\"",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true,
-                };
-                using (var p = Process.Start(procnew))
-                {
-                    p.WaitForExit();
-                }
-
-                var procn = new ProcessStartInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "opusenc.exe"))
-                {
-                    WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
-                    Arguments = $" \"{tmpWav}\" \"{tmpOpus}\" --serial 42 --quiet --padding 0 --vbr --comp 10 --framesize 20 ",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true,
-                };
-                using (var p = Process.Start(procn))
-                {
-                    p.WaitForExit();
-                }
-
                 int id = -1;
                 for (int e = 0; e < info.OpusCount; e++)
                 {
@@ -207,6 +173,49 @@ namespace OpusToolZ
                 }
 
                 int pakIdx = info.PackIndices[id];
+
+                if (streams[pakIdx] == null) {
+                    Console.WriteLine("Opuspak " + pakIdx + " for file " + foundids[i] + " was not found.");
+                    continue;
+                }
+
+                var proc = new ProcessStartInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "opusenc.exe"))
+                {
+                    WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                    Arguments = $" \"{inpath}\" \"{tmpOpus}\" --serial 42 --quiet --padding 0 --vbr --comp 10 --framesize 20 ",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+                using (var p = Process.Start(proc))
+                {
+                    p.WaitForExit();
+                }
+
+                var procnew = new ProcessStartInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "opusdec.exe"))
+                {
+                    WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                    Arguments = $" \"{tmpOpus}\" \"{tmpWav}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+                using (var p = Process.Start(procnew))
+                {
+                    p.WaitForExit();
+                }
+
+                var procn = new ProcessStartInfo(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "opusenc.exe"))
+                {
+                    WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                    Arguments = $" \"{tmpWav}\" \"{tmpOpus}\" --serial 42 --quiet --padding 0 --vbr --comp 10 --framesize 20 ",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+                using (var p = Process.Start(procn))
+                {
+                    p.WaitForExit();
+                }
+
+                
 
                 info.WriteOpusToPak(
                     new MemoryStream(File.ReadAllBytes(tmpOpus)), 
