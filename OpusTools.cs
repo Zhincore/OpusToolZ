@@ -133,7 +133,7 @@ namespace WolvenKit.Modkit.RED4.Opus
                     string name = OpusHashes[i] + ".opus";
                     File.WriteAllBytes(Path.Combine(outdir.FullName, name), bytes);
                     _hashes.RemoveAll(h => h == OpusHashes[i]);
-                    Console.WriteLine("Wrote " + (hashes.Count - _hashes.Count + 1) + "/" + hashes.Count + " opuses.");
+                    Console.WriteLine("Wrote " + (hashes.Count - _hashes.Count) + "/" + hashes.Count + " opuses.");
                 }
             }
 
